@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local environments
+.venv/
+venv/
+env/
+
+# Datasets and caches
+data/
+datasets/
+*_dataset*/
+*.npz
+*.npy
+*.bmp
+*.png
+*.jpg
+*.jpeg
+
+# Experiment outputs
+results/
+cloud_results/
+logs/
+tensorboard/
+wandb/
+*.log
+*.csv.tmp
+
+# Checkpoints and exported artifacts
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.ply
+*.zip
+*.docx
+*.pdf
+*.svg
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
