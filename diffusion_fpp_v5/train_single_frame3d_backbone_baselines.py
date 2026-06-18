@@ -362,7 +362,6 @@ def save_visuals(
 
 def smoke_check(args: argparse.Namespace, loaders_obj: Dict[str, object], device: torch.device) -> Dict[str, object]:
     model, disc = build_arch(args, device)
-    (save_dir / "checkpoints").mkdir(parents=True, exist_ok=True)
     batch = next(iter(loaders_obj["loaders"]["train"]))  # type: ignore[index]
     pred, output = model_depth_norm(model, batch, device, args.arch, return_output=True)  # type: ignore[assignment]
     assert torch.is_tensor(pred)
@@ -408,6 +407,7 @@ def train_one(args: argparse.Namespace) -> None:
     loaders_obj = make_loaders(args)
     save_dir = Path(args.save_dir)
     save_dir.mkdir(parents=True, exist_ok=True)
+    (save_dir / "checkpoints").mkdir(parents=True, exist_ok=True)
     args.normalization = loaders_obj["norm"]
     args.split_counts = loaders_obj["split_counts"]
     smoke = smoke_check(args, loaders_obj, device)
