@@ -467,6 +467,18 @@ def build_model(cond_channels: int, out_channels: int, args: argparse.Namespace)
 
 
 def forward_direct(model: torch.nn.Module, batch: Dict[str, object], device: torch.device) -> torch.Tensor:
+    baseline_arch = getattr(model, "_single_frame_baseline_arch", None)
+    if baseline_arch:
+        fringe = batch["fringe"].to(device, non_blocking=True).float()  # type: ignore[index]
+        if baseline_arch == "unet":
+            zeros = torch.zeros((fringe.shape[0], 1, fringe.shape[-2], fringe.shape[-1]), device=device)
+            t = torch.zeros((fringe.shape[0],), dtype=torch.long, device=device)
+            return torch.tanh(model(zeros, t, fringe))
+        output = model(fringe)
+        depth = output["depth"] if isinstance(output, dict) else output
+        if baseline_arch == "pix2pix":
+            return torch.clamp(depth, 0.0, 1.0) * 2.0 - 1.0
+        return torch.tanh(depth)
     cond = batch["cond"].to(device, non_blocking=True).float()  # type: ignore[index]
     zeros = torch.zeros((cond.shape[0], 1, cond.shape[-2], cond.shape[-1]), device=device)
     t = torch.zeros((cond.shape[0],), dtype=torch.long, device=device)
@@ -772,6 +784,36 @@ def load_base_model(path: str | Path, cond_channels: int, device: torch.device) 
     saved_args = ckpt.get("args", {})
     if not isinstance(saved_args, dict):
         saved_args = {}
+    baseline_arch = str(saved_args.get("arch", "")).lower()
+    if baseline_arch:
+        if baseline_arch == "unet":
+            model_args = namespace_from_dict(saved_args)
+            model = ConditionalUNet(
+                in_channels=1,
+                cond_channels=1,
+                out_channels=1,
+                base_ch=int(getattr(model_args, "unet_base_channels", 32)),
+                ch_mult=tuple(getattr(model_args, "unet_ch_mult", [1, 2, 4])),
+                num_res_blocks=int(getattr(model_args, "unet_num_res_blocks", 1)),
+                dropout=float(getattr(model_args, "dropout", 0.0)),
+                time_emb_dim=int(getattr(model_args, "unet_time_emb_dim", 128)),
+            ).to(device)
+        else:
+            from models.single_frame_baselines import build_single_frame_baseline
+
+            model = build_single_frame_baseline(
+                baseline_arch,
+                in_channels=1,
+                out_channels=1,
+                base_channels=int(saved_args.get("base_channels") or 0) or None,
+                dropout_rate=float(saved_args.get("dropout", 0.0)),
+            ).to(device)
+        model.load_state_dict(ckpt["model_state_dict"])
+        setattr(model, "_single_frame_baseline_arch", baseline_arch)
+        model.eval()
+        for p in model.parameters():
+            p.requires_grad_(False)
+        return model, saved_args
     base_config = canonical_config(str(saved_args.get("config", "raw")))
     out_channels = 5 if base_config == "teacher_aux" else 1
     model_args = namespace_from_dict(saved_args)
