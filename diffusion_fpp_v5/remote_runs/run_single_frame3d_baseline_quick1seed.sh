@@ -4,6 +4,7 @@ set -euo pipefail
 cd /root/autodl-tmp/diffusion_fpp_v5
 
 PY=/root/miniconda3/bin/python
+export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
 DATA=/root/autodl-tmp/single_frame_3d_dataset_v1_upload_smalltest
 TEACHER=/root/autodl-tmp/single_frame_3d_dataset_v1_teacher_extra
 OOD=/root/autodl-tmp/single_frame_3d_dataset_v1_upload_smalltest_ood61_64
@@ -27,7 +28,8 @@ for arch in "${ARCHES[@]}"; do
     --arch "$arch" \
     --seed 0 \
     --epochs 40 \
-    --batch_size 4 \
+    --batch_size 2 \
+    --accum_steps 2 \
     --eval_batch_size 2 \
     --num_workers 8 \
     --eval_every 5 \
@@ -45,7 +47,8 @@ for arch in "${ARCHES[@]}"; do
     --arch "$arch" \
     --seed 0 \
     --epochs 40 \
-    --batch_size 4 \
+    --batch_size 2 \
+    --accum_steps 2 \
     --eval_batch_size 2 \
     --num_workers 8 \
     --eval_every 5 \

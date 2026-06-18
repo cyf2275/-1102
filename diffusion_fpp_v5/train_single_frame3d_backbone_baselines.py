@@ -441,6 +441,9 @@ def train_one(args: argparse.Namespace) -> None:
             disc.train()
         totals: Dict[str, float] = {"loss": 0.0}
         seen = 0
+        accum_steps = max(1, int(args.accum_steps))
+        if args.arch != "pix2pix":
+            optimizer.zero_grad(set_to_none=True)
         for batch in tqdm(loaders_obj["loaders"]["train"], desc=f"{args.arch} {ep}/{args.epochs}"):  # type: ignore[index]
             if args.arch == "pix2pix":
                 assert disc is not None and optimizer_d is not None
@@ -448,18 +451,22 @@ def train_one(args: argparse.Namespace) -> None:
                 for k, v in parts.items():
                     totals[k] = totals.get(k, 0.0) + v
             else:
-                optimizer.zero_grad(set_to_none=True)
                 with autocast(enabled=(device.type == "cuda" and not args.no_amp)):
                     pred, output = model_depth_norm(model, batch, device, args.arch, return_output=True)  # type: ignore[assignment]
                     assert torch.is_tensor(pred)
                     loss = depth_loss(pred, batch, device, args)
                     if args.arch == "mps_xnet":
                         loss = loss + mps_aux_loss(output, batch, device, args)
-                scaler.scale(loss).backward()
-                scaler.unscale_(optimizer)
-                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-                scaler.step(optimizer)
-                scaler.update()
+                scaler.scale(loss / accum_steps).backward()
+                is_step = ((seen + 1) % accum_steps == 0) or (
+                    args.max_train_batches and (seen + 1) >= args.max_train_batches
+                )
+                if is_step:
+                    scaler.unscale_(optimizer)
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                    scaler.step(optimizer)
+                    scaler.update()
+                    optimizer.zero_grad(set_to_none=True)
                 totals["loss"] = totals.get("loss", 0.0) + float(loss.item())
             seen += 1
             if args.max_train_batches and seen >= args.max_train_batches:
@@ -543,6 +550,7 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--epochs", type=int, default=40)
     parser.add_argument("--batch_size", type=int, default=4)
+    parser.add_argument("--accum_steps", type=int, default=1)
     parser.add_argument("--eval_batch_size", type=int, default=2)
     parser.add_argument("--num_workers", type=int, default=8)
     parser.add_argument("--image_h", type=int, default=480)
