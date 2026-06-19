@@ -68,6 +68,9 @@ diffusion_fpp_v5/train_single_frame3d_refined_xphase_depth.py
 diffusion_fpp_v5/train_refined_xphase_reliability_selector.py
 diffusion_fpp_v5/make_best_anchor_reconstruction_visuals.py
 diffusion_fpp_v5/export_best_anchor_pose_ply.py
+diffusion_fpp_v5/export_single_frame3d_direct_baseline_ply.py
+tools/add_selfbuilt_dataset_supplementary_analysis_20260619.py
+tools/build_selfbuilt_dataset_report_20260619.py
 ```
 
 ## Recommended Paper Protocol
@@ -84,6 +87,22 @@ Recommended final comparison groups:
 - Ours full: phase posterior diffusion plus RCPC/selector under legal single-frame input.
 
 See [docs/EXPERIMENT_PLAN.md](docs/EXPERIMENT_PLAN.md) for details.
+
+## 2026-06-19 Paper Result Package
+
+The self-built dataset paper package adds:
+
+- Formal 3-seed Attention UNet and UNet++ direct baselines at 80 epochs.
+- Formal Attention UNet base plus phase posterior evidence and RCPC/selector.
+- Per-sample paired significance analysis after averaging seeds.
+- Strict camera-projective PLY export for direct baselines and ours on
+  `new0612_obj061_pose02`.
+- A local Word/Markdown report generator for the pulled result package.
+
+See:
+
+- [docs/RESULTS_20260619_SELFBUILT_SINGLE_FRAME3D.md](docs/RESULTS_20260619_SELFBUILT_SINGLE_FRAME3D.md)
+- [docs/CHECKPOINT_BACKUP_20260619.md](docs/CHECKPOINT_BACKUP_20260619.md)
 
 ## Notes
 
